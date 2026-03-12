@@ -1,0 +1,40 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# IDE
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VRM avatar files (add your own)
+Assets/StreamingAssets/*.vrm
+
+# Unity burst debug
+*_BurstDebugInformation_DoNotShip/
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
