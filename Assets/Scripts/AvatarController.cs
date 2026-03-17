@@ -52,6 +52,11 @@ public class AvatarController : MonoBehaviour
 
     async void Start()
     {
+        // Load server.txt (async on Android, sync on Editor/PC)
+        bool configReady = false;
+        StartCoroutine(Config.LoadServerHostAsync(() => configReady = true));
+        while (!configReady) await System.Threading.Tasks.Task.Yield();
+
         // Lock to portrait orientation
         if (Config.LockPortrait)
         {

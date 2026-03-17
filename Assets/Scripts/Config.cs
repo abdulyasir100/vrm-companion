@@ -5,6 +5,9 @@ using System.IO;
 /// VRMCompanion configuration — all tuneable values in one place.
 /// Server IP is loaded from StreamingAssets/server.txt (gitignored).
 /// Create that file with just your server IP, e.g.: 100.102.146.85
+///
+/// On Android, File.ReadAllText can't read StreamingAssets directly,
+/// so we use UnityWebRequest via a lazy-load pattern.
 /// </summary>
 public static class Config
 {
@@ -12,16 +15,69 @@ public static class Config
     private const string DefaultServerHost = "127.0.0.1";
     private const int    ServerPort = 8800;
 
-    public static readonly string AvatarServerHost;
-    public static readonly int    AvatarServerPort = ServerPort;
+    private static string _serverHost;
+    private static bool _serverHostLoaded;
 
-    static Config()
+    public static string AvatarServerHost
     {
-        AvatarServerHost = LoadServerHost();
-        Debug.Log($"[Config] Server: {AvatarServerHost}:{AvatarServerPort}");
+        get
+        {
+            if (!_serverHostLoaded)
+            {
+                _serverHost = LoadServerHostSync();
+                _serverHostLoaded = true;
+                Debug.Log($"[Config] Server: {_serverHost}:{ServerPort}");
+            }
+            return _serverHost;
+        }
     }
 
-    private static string LoadServerHost()
+    /// <summary>
+    /// Called by AvatarController on Start() to load server.txt via UnityWebRequest on Android.
+    /// </summary>
+    public static System.Collections.IEnumerator LoadServerHostAsync(System.Action onDone = null)
+    {
+        if (_serverHostLoaded)
+        {
+            onDone?.Invoke();
+            yield break;
+        }
+
+        string path = Path.Combine(Application.streamingAssetsPath, "server.txt");
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using (var request = UnityEngine.Networking.UnityWebRequest.Get(path))
+        {
+            yield return request.SendWebRequest();
+            if (request.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+            {
+                string ip = request.downloadHandler.text.Trim();
+                if (!string.IsNullOrEmpty(ip))
+                {
+                    _serverHost = ip;
+                    _serverHostLoaded = true;
+                    Debug.Log($"[Config] Server (Android): {_serverHost}:{ServerPort}");
+                    onDone?.Invoke();
+                    yield break;
+                }
+            }
+            Debug.LogWarning($"[Config] Android: server.txt read failed, using default");
+        }
+#else
+        // Editor/PC: synchronous read works fine
+        yield return null;
+#endif
+
+        if (!_serverHostLoaded)
+        {
+            _serverHost = LoadServerHostSync();
+            _serverHostLoaded = true;
+            Debug.Log($"[Config] Server: {_serverHost}:{ServerPort}");
+        }
+        onDone?.Invoke();
+    }
+
+    private static string LoadServerHostSync()
     {
         try
         {
@@ -41,6 +97,7 @@ public static class Config
         return DefaultServerHost;
     }
 
+    public static readonly int AvatarServerPort = ServerPort;
     public static string WebSocketUrl => $"ws://{AvatarServerHost}:{AvatarServerPort}/ws";
     public static string HttpBaseUrl  => $"http://{AvatarServerHost}:{AvatarServerPort}";
 
