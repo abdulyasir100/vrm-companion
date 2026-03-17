@@ -24,6 +24,19 @@ public class SleepOverlay : MonoBehaviour
     private int _frameIndex;
     private float _frameTimer;
 
+    /// <summary>
+    /// Inject references at creation time — avoids GetComponentInParent failing on inactive GameObjects.
+    /// Called by AvatarController.CreateSleepOverlay() before the canvas is deactivated.
+    /// </summary>
+    public void InjectReferences(CanvasGroup cg, Transform canvasTransform)
+    {
+        _text = GetComponent<TextMeshProUGUI>();
+        _canvasGroup = cg;
+        _canvasTransform = canvasTransform;
+        _baseLocalPos = canvasTransform != null ? canvasTransform.localPosition : transform.localPosition;
+        _initialized = true;
+    }
+
     void EnsureInitialized()
     {
         if (_initialized) return;

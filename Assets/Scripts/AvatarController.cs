@@ -35,6 +35,7 @@ public class AvatarController : MonoBehaviour
     private bool _isCostumeAnimating;
     private string _currentCostumeId;
     private SleepOverlay _sleepOverlay;
+    private bool _isSleepingState; // persists across costume changes
 
     // Default transform — stored at Start(), used as walk-on target
     private Vector3 _defaultPosition;
@@ -290,8 +291,9 @@ public class AvatarController : MonoBehaviour
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = new Color(0.7f, 0.85f, 1f, 1f); // Soft blue
 
-        // Add the SleepOverlay behavior
+        // Add the SleepOverlay behavior and inject references before deactivating
         _sleepOverlay = textGO.AddComponent<SleepOverlay>();
+        _sleepOverlay.InjectReferences(canvasGroup, canvasGO.transform);
 
         // Start hidden
         canvasGO.SetActive(false);
@@ -347,8 +349,8 @@ public class AvatarController : MonoBehaviour
 
             Debug.Log($"[AvatarController] Playing audio from: {fullUrl}");
 
-            // Switch to talking animation while audio plays
-            if (animationController != null)
+            // Switch to talking animation only for NEUTRAL — keep emotion animation for others
+            if (animationController != null && emotion.ToUpper() == "NEUTRAL")
                 animationController.PlayEmotion("TALKING");
 
             audioPlayer.PlayFromUrl(fullUrl, () =>
@@ -503,6 +505,8 @@ public class AvatarController : MonoBehaviour
             if (_loaded)
             {
                 InitSubControllers();
+                if (_isSleepingState)
+                    SetSleeping(true);
                 Debug.Log($"[AvatarController] Costume switched to '{costumeId}' successfully");
             }
             else
@@ -514,7 +518,11 @@ public class AvatarController : MonoBehaviour
 
                 await LoadAvatar();
                 if (_loaded)
+                {
                     InitSubControllers();
+                    if (_isSleepingState)
+                        SetSleeping(true);
+                }
             }
         }
         catch (System.Exception e)
@@ -529,7 +537,11 @@ public class AvatarController : MonoBehaviour
             {
                 await LoadAvatar();
                 if (_loaded)
+                {
                     InitSubControllers();
+                    if (_isSleepingState)
+                        SetSleeping(true);
+                }
             }
             catch (System.Exception e2)
             {
@@ -639,6 +651,8 @@ public class AvatarController : MonoBehaviour
         if (_loaded)
         {
             InitSubControllers();
+            if (_isSleepingState)
+                SetSleeping(true);
             swapSuccess = true;
             if (AvatarAnimator != null)
                 AvatarAnimator.applyRootMotion = false;
@@ -657,6 +671,8 @@ public class AvatarController : MonoBehaviour
             if (_loaded)
             {
                 InitSubControllers();
+                if (_isSleepingState)
+                    SetSleeping(true);
                 if (AvatarAnimator != null)
                     AvatarAnimator.applyRootMotion = false;
             }
@@ -734,6 +750,7 @@ public class AvatarController : MonoBehaviour
     /// </summary>
     public void SetSleeping(bool sleeping)
     {
+        _isSleepingState = sleeping;
         Debug.Log($"[AvatarController] SetSleeping({sleeping}) — overlay={_sleepOverlay != null}, idle={idleBehavior != null}");
 
         if (idleBehavior != null)

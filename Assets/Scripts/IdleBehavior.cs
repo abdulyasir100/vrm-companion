@@ -24,6 +24,7 @@ public class IdleBehavior : MonoBehaviour
     private SkinnedMeshRenderer _faceMesh;
     private int _blinkLeftIndex = -1;
     private int _blinkRightIndex = -1;
+    private bool _useVrmExpressionBlink; // fallback when blendshape search fails
 
     // Bone references
     private Transform _spine;
@@ -39,6 +40,7 @@ public class IdleBehavior : MonoBehaviour
         _faceMesh = null;
         _blinkLeftIndex = -1;
         _blinkRightIndex = -1;
+        _useVrmExpressionBlink = false;
         _spine = null;
         _hips = null;
 
@@ -114,9 +116,19 @@ public class IdleBehavior : MonoBehaviour
         }
 
         if (_faceMesh != null)
+        {
             Debug.Log($"[IdleBehavior] Found blink blendshapes: L={_blinkLeftIndex}, R={_blinkRightIndex} on {_faceMesh.name}");
+        }
+        else if (_vrm?.Runtime?.Expression != null)
+        {
+            // Fallback: use VRM expression system for blinking (works with all VRM naming conventions)
+            _useVrmExpressionBlink = true;
+            Debug.Log("[IdleBehavior] Using VRM Expression system for blink (no direct blendshape found)");
+        }
         else
+        {
             Debug.LogWarning("[IdleBehavior] Could not find blink blendshapes on any mesh!");
+        }
     }
 
     public void SetSleeping(bool sleeping)
@@ -130,7 +142,10 @@ public class IdleBehavior : MonoBehaviour
             _sleepBlinkWeight = 0f;
             _nextBlinkTime = Random.Range(Config.BlinkIntervalMin, Config.BlinkIntervalMax);
 
-            // Force blendshapes to 0 (eyes open) right now
+            // Force eyes open — clear BOTH VRM expression and direct blendshape
+            // to prevent stale state from either path keeping eyes closed
+            if (_vrm?.Runtime?.Expression != null)
+                _vrm.Runtime.Expression.SetWeight(UniVRM10.ExpressionKey.Blink, 0f);
             if (_faceMesh != null)
             {
                 if (_blinkLeftIndex >= 0)
@@ -162,13 +177,19 @@ public class IdleBehavior : MonoBehaviour
 
     void UpdateSleepEyes()
     {
-        if (_faceMesh == null) return;
         // Smoothly close eyes
         _sleepBlinkWeight = Mathf.Lerp(_sleepBlinkWeight, 100f, Time.deltaTime * 3f);
-        if (_blinkLeftIndex >= 0)
-            _faceMesh.SetBlendShapeWeight(_blinkLeftIndex, _sleepBlinkWeight);
-        if (_blinkRightIndex >= 0 && _blinkRightIndex != _blinkLeftIndex)
-            _faceMesh.SetBlendShapeWeight(_blinkRightIndex, _sleepBlinkWeight);
+
+        // Set BOTH VRM expression and direct blendshape to stay in sync
+        if (_vrm?.Runtime?.Expression != null)
+            _vrm.Runtime.Expression.SetWeight(UniVRM10.ExpressionKey.Blink, _sleepBlinkWeight / 100f);
+        if (_faceMesh != null)
+        {
+            if (_blinkLeftIndex >= 0)
+                _faceMesh.SetBlendShapeWeight(_blinkLeftIndex, _sleepBlinkWeight);
+            if (_blinkRightIndex >= 0 && _blinkRightIndex != _blinkLeftIndex)
+                _faceMesh.SetBlendShapeWeight(_blinkRightIndex, _sleepBlinkWeight);
+        }
     }
 
     void UpdateSleepBreathing()
@@ -181,16 +202,22 @@ public class IdleBehavior : MonoBehaviour
 
     void UpdateBlink()
     {
-        if (_faceMesh == null) return;
+        if (_faceMesh == null && !_useVrmExpressionBlink) return;
 
         // Smoothly open eyes when not sleeping
         if (_sleepBlinkWeight > 0.1f)
         {
             _sleepBlinkWeight = Mathf.Lerp(_sleepBlinkWeight, 0f, Time.deltaTime * 5f);
-            if (_blinkLeftIndex >= 0)
-                _faceMesh.SetBlendShapeWeight(_blinkLeftIndex, _sleepBlinkWeight);
-            if (_blinkRightIndex >= 0 && _blinkRightIndex != _blinkLeftIndex)
-                _faceMesh.SetBlendShapeWeight(_blinkRightIndex, _sleepBlinkWeight);
+            // Clear both paths to stay in sync
+            if (_vrm?.Runtime?.Expression != null)
+                _vrm.Runtime.Expression.SetWeight(UniVRM10.ExpressionKey.Blink, _sleepBlinkWeight / 100f);
+            if (_faceMesh != null)
+            {
+                if (_blinkLeftIndex >= 0)
+                    _faceMesh.SetBlendShapeWeight(_blinkLeftIndex, _sleepBlinkWeight);
+                if (_blinkRightIndex >= 0 && _blinkRightIndex != _blinkLeftIndex)
+                    _faceMesh.SetBlendShapeWeight(_blinkRightIndex, _sleepBlinkWeight);
+            }
             return;
         }
 
@@ -226,12 +253,19 @@ public class IdleBehavior : MonoBehaviour
                 _nextBlinkTime = Random.Range(Config.BlinkIntervalMin, Config.BlinkIntervalMax);
             }
 
-            // Drive blendshapes directly on the mesh (0-100 range)
-            float meshWeight = blinkWeight * 100f;
-            if (_blinkLeftIndex >= 0)
-                _faceMesh.SetBlendShapeWeight(_blinkLeftIndex, meshWeight);
-            if (_blinkRightIndex >= 0 && _blinkRightIndex != _blinkLeftIndex)
-                _faceMesh.SetBlendShapeWeight(_blinkRightIndex, meshWeight);
+            // Drive blink via VRM expression or direct blendshapes
+            if (_useVrmExpressionBlink && _vrm?.Runtime?.Expression != null)
+            {
+                _vrm.Runtime.Expression.SetWeight(UniVRM10.ExpressionKey.Blink, blinkWeight);
+            }
+            else if (_faceMesh != null)
+            {
+                float meshWeight = blinkWeight * 100f;
+                if (_blinkLeftIndex >= 0)
+                    _faceMesh.SetBlendShapeWeight(_blinkLeftIndex, meshWeight);
+                if (_blinkRightIndex >= 0 && _blinkRightIndex != _blinkLeftIndex)
+                    _faceMesh.SetBlendShapeWeight(_blinkRightIndex, meshWeight);
+            }
         }
     }
 

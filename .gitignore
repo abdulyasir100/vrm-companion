@@ -31,6 +31,9 @@ Thumbs.db
 # VRM avatar files (add your own)
 Assets/StreamingAssets/*.vrm
 
+# Server config (contains your IP)
+Assets/StreamingAssets/server.txt
+
 # Unity burst debug
 *_BurstDebugInformation_DoNotShip/
 

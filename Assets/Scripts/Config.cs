@@ -1,13 +1,46 @@
+using UnityEngine;
+using System.IO;
+
 /// <summary>
 /// VRMCompanion configuration — all tuneable values in one place.
-/// Attach to an empty GameObject named "Config" in the scene,
-/// or just reference the static defaults directly.
+/// Server IP is loaded from StreamingAssets/server.txt (gitignored).
+/// Create that file with just your server IP, e.g.: 100.102.146.85
 /// </summary>
 public static class Config
 {
     // --- Avatar Server ---
-    public const string AvatarServerHost = "100.83.33.113";
-    public const int    AvatarServerPort = 8800;
+    private const string DefaultServerHost = "127.0.0.1";
+    private const int    ServerPort = 8800;
+
+    public static readonly string AvatarServerHost;
+    public static readonly int    AvatarServerPort = ServerPort;
+
+    static Config()
+    {
+        AvatarServerHost = LoadServerHost();
+        Debug.Log($"[Config] Server: {AvatarServerHost}:{AvatarServerPort}");
+    }
+
+    private static string LoadServerHost()
+    {
+        try
+        {
+            string path = Path.Combine(Application.streamingAssetsPath, "server.txt");
+            if (File.Exists(path))
+            {
+                string ip = File.ReadAllText(path).Trim();
+                if (!string.IsNullOrEmpty(ip))
+                    return ip;
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[Config] Failed to read server.txt: {e.Message}");
+        }
+        Debug.LogWarning($"[Config] server.txt not found, using default: {DefaultServerHost}");
+        return DefaultServerHost;
+    }
+
     public static string WebSocketUrl => $"ws://{AvatarServerHost}:{AvatarServerPort}/ws";
     public static string HttpBaseUrl  => $"http://{AvatarServerHost}:{AvatarServerPort}";
 

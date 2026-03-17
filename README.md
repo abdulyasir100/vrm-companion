@@ -80,7 +80,7 @@ All tuneable values are in `Config.cs`:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `AvatarServerHost` | `100.83.33.113` | Server IP (change to yours) |
+| `AvatarServerHost` | `YOUR_SERVER_IP` | Server IP (change to yours) |
 | `AvatarServerPort` | `8800` | Server port |
 | `ExpressionBlendSpeed` | `5.0` | Emotion transition speed |
 | `LipSyncSensitivity` | `30.0` | Mouth movement amplitude |

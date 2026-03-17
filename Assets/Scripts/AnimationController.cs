@@ -19,9 +19,11 @@ public class AnimationController : MonoBehaviour
 {
     private Animator _animator;
     private bool _initialized;
+    private int _currentEmotionIndex = -1;
 
-    // Parameter name in the Animator Controller
+    // Parameter names in the Animator Controller
     private const string EMOTION_PARAM = "EmotionIndex";
+    private const string VARIANT_PARAM = "ClipVariant";
 
     // Map emotion strings to animator indices
     private static readonly Dictionary<string, int> EmotionIndex = new Dictionary<string, int>
@@ -34,6 +36,19 @@ public class AnimationController : MonoBehaviour
         { "THINKING",  5 },
         { "TALKING",   6 },
         { "WALKING",   7 },
+    };
+
+    // Number of animation variants per emotion (update when FBX files are added)
+    private static readonly Dictionary<string, int> VariantCounts = new Dictionary<string, int>
+    {
+        { "NEUTRAL",   1 },
+        { "HAPPY",     4 },  // Happy, Happy_2, Happy_3, Happy_4
+        { "SAD",       3 },  // Sad, Sad_2, Sad_3
+        { "ANGRY",     5 },  // Angry, Angry_2, Angry_3, Angry_4, Angry_5
+        { "SURPRISED", 3 },  // Surprised, Surprised_2, Surprised_3
+        { "THINKING",  3 },  // Thinking, Thinking_2, Thinking_3
+        { "TALKING",   3 },  // Talking, Talking_2, Talking_3
+        { "WALKING",   1 },
     };
 
     public void Init(Animator animator)
@@ -61,11 +76,22 @@ public class AnimationController : MonoBehaviour
 
         if (EmotionIndex.TryGetValue(upper, out int index))
         {
+            // Skip if already playing this emotion (don't restart animation)
+            if (index == _currentEmotionIndex) return;
+            _currentEmotionIndex = index;
+
             _animator.SetInteger(EMOTION_PARAM, index);
+
+            // Pick a random variant if multiple exist
+            int variants = VariantCounts.ContainsKey(upper) ? VariantCounts[upper] : 1;
+            int variant = variants > 1 ? Random.Range(0, variants) : 0;
+            _animator.SetInteger(VARIANT_PARAM, variant);
         }
         else
         {
+            _currentEmotionIndex = 0;
             _animator.SetInteger(EMOTION_PARAM, 0); // fallback to Idle
+            _animator.SetInteger(VARIANT_PARAM, 0);
             Debug.LogWarning($"[AnimationController] Unknown emotion '{emotion}', playing Idle");
         }
     }

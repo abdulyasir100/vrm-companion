@@ -22,12 +22,17 @@ public class WebSocketClient : MonoBehaviour
     private bool _connecting;
     private float _heartbeatTimer;
     private float _lastMessageTime;
+    private MoodDisplay _moodDisplay;
 
     public bool IsConnected => _connected;
 
     void Start()
     {
         _reconnectDelay = Config.ReconnectBaseDelay;
+
+        // Find mood display in scene
+        _moodDisplay = FindObjectOfType<MoodDisplay>();
+
         Connect();
     }
 
@@ -154,6 +159,18 @@ public class WebSocketClient : MonoBehaviour
                         avatarController.SetSleeping(msg.sleeping);
                     break;
 
+                case "config":
+                    if (avatarController != null && avatarController.touchInteraction != null)
+                        avatarController.touchInteraction.SetTouchEnabled(msg.touch_enabled);
+                    Debug.Log($"[WebSocket] Config update: touch_enabled={msg.touch_enabled}");
+                    break;
+
+                case "mood":
+                    if (_moodDisplay != null)
+                        _moodDisplay.UpdateMood(msg.value);
+                    Debug.Log($"[WebSocket] Mood update: {msg.value}");
+                    break;
+
                 case "connected":
                     // Welcome message — no action needed
                     break;
@@ -269,4 +286,10 @@ public class ServerMessage
 
     // Sleep fields
     public bool sleeping;
+
+    // Mood fields
+    public float value;  // matches server's {"type": "mood", "value": 77.0}
+
+    // Config fields
+    public bool touch_enabled;
 }
