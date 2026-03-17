@@ -14,7 +14,9 @@ Built for Galaxy Tab A9+ but works on any Android device.
 - **Costume Switching** — swap VRM models on command with walk-off/walk-on animation
 - **Sleep Mode** — closed eyes, slow breathing, floating ZZZ overlay
 - **Offline Indicator** — visual feedback when disconnected from server
-- **Touch Interaction** — tap responses
+- **Touch Interaction** — tap sends to LLM for natural mood-based responses, with enable/disable toggle
+- **Mood Display** — circular gradient ring showing current mood value
+- **Animation Variants** — 2-5 random animation clips per emotion (Mixamo)
 - **Subtitles** — displays chat text on screen
 - **Portrait Lock** — designed for tablet portrait mode
 
@@ -31,11 +33,11 @@ Built for Galaxy Tab A9+ but works on any Android device.
 3. Place your VRM files in `Assets/StreamingAssets/`:
    - Name them to match `Config.cs` entries (default: `SuiseiMaid.vrm`, `SuiseiIdol.vrm`, `SuiseiCasual.vrm`)
    - Or edit `Config.cs` to match your filenames
-4. Update `Config.cs` with your server IP:
-   ```csharp
-   public const string AvatarServerHost = "your-server-ip";
-   public const int    AvatarServerPort = 8800;
+4. Create `Assets/StreamingAssets/server.txt` with your server IP:
    ```
+   192.168.1.100
+   ```
+   This file is gitignored. If missing, defaults to `127.0.0.1`.
 5. Build for Android (File > Build Settings > Android > Build)
 
 ## Project Structure
@@ -53,8 +55,9 @@ Assets/
 │   ├── IdleBehavior.cs        # Blinking, breathing, body sway
 │   ├── SubtitleController.cs  # On-screen chat text display
 │   ├── CostumePicker.cs       # Costume selection UI
-│   ├── TouchInteraction.cs    # Tap/touch responses
+│   ├── TouchInteraction.cs    # Tap → LLM chat with mood-based responses
 │   ├── SleepOverlay.cs        # Sleep mode visuals (ZZZ, closed eyes)
+│   ├── MoodDisplay.cs         # Circular mood ring UI
 │   ├── OfflineMode.cs         # Disconnection indicator
 │   └── CameraFraming.cs       # Camera positioning for VRM model
 │
@@ -72,6 +75,8 @@ The app connects to `ws://<server>:<port>/ws` and expects JSON messages:
 {"type": "chat", "text": "Hello!", "emotion": "HAPPY", "audio_url": "/audio/abc123.wav"}
 {"type": "costume", "costume_id": "casual"}
 {"type": "sleep", "sleeping": true}
+{"type": "mood", "value": 77.0}
+{"type": "config", "touch_enabled": true}
 ```
 
 ## Configuration
@@ -90,7 +95,7 @@ All tuneable values are in `Config.cs`:
 
 ## Companion Server
 
-This app is designed to work with [avatar-server](https://github.com/venomaru/avatar-server) but any WebSocket server sending the expected JSON format will work.
+This app is designed to work with [avatar-server](https://github.com/abdulyasir100/vrm-avatar-server) but any WebSocket server sending the expected JSON format will work.
 
 ## License
 
